@@ -191,10 +191,10 @@ class ELOSimulator {
         if (random < team1WinProb) {
             // Team 1 wins
             result = 1;
-            score1 = Math.floor(Math.random() * 3) + 1; // 1-3 goals
-            score2 = Math.floor(score1 * Math.random()); // 0 to score1-1 goals
+            score1 = Math.floor(Math.random() * 3) + 1;
+            score2 = Math.floor(score1 * Math.random());
         } else if (random < team1WinProb + 0.2) {
-            // Draw (20% chance)
+            // Draw
             result = 0.5;
             score1 = Math.floor(Math.random() * 3);
             score2 = score1;
