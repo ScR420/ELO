@@ -394,30 +394,112 @@ class ELOSimulator {
         console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
         console.log('Tournament grid count:', tournamentTeamGrid.children.length);
         
-        // Debug: Make sure teams are visible
-        console.log('Teams grid display style:', teamsGrid.style.display);
-        console.log('Tournament grid display style:', tournamentTeamGrid.style.display);
+        // Add manual team input for tournaments
+        this.addManualTeamInput();
+    }
+
+    // Add manual team input for tournaments
+    addManualTeamInput() {
+        const tournamentTeamGrid = document.getElementById('team-grid');
+        if (!tournamentTeamGrid) return;
         
-        // Force teams to be visible
-        teamsGrid.style.display = 'grid';
-        tournamentTeamGrid.style.display = 'grid';
+        // Create manual input section
+        const manualInputSection = document.createElement('div');
+        manualInputSection.className = 'manual-team-input';
+        manualInputSection.style.cssText = `
+            grid-column: 1 / -1;
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-primary);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        `;
         
-        // Add a simple test team that's definitely visible
-        const testTeam = document.createElement('div');
-        testTeam.innerHTML = '<h4>🔴 TEST TEAM - KLICKBAR</h4><div>ELO: 2000</div>';
-        testTeam.style.border = '3px solid red';
-        testTeam.style.padding = '15px';
-        testTeam.style.margin = '10px';
-        testTeam.style.backgroundColor = 'yellow';
-        testTeam.style.cursor = 'pointer';
-        testTeam.addEventListener('click', () => {
-            alert('Test Team wurde geklickt!');
+        manualInputSection.innerHTML = `
+            <h4 style="color: var(--accent-primary); margin-bottom: 1rem;">🏆 Manuell Team hinzufügen</h4>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="manual-team-name" placeholder="Team Name" style="
+                    background: var(--bg-tertiary);
+                    border: 1px solid var(--border-color);
+                    color: var(--text-primary);
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    min-width: 150px;
+                ">
+                <input type="number" id="manual-team-elo" placeholder="ELO Rating" style="
+                    background: var(--bg-tertiary);
+                    border: 1px solid var(--border-color);
+                    color: var(--text-primary);
+                    padding: 0.5rem;
+                    border-radius: 4px;
+                    width: 100px;
+                ">
+                <button id="add-manual-team" style="
+                    background: var(--accent-primary);
+                    color: var(--bg-primary);
+                    border: none;
+                    padding: 0.5rem 1rem;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-weight: 600;
+                ">Team hinzufügen</button>
+            </div>
+            <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                Hinzugefügte Teams: <span id="manual-teams-count">0</span>
+            </div>
+        `;
+        
+        // Insert at the beginning of the tournament grid
+        tournamentTeamGrid.insertBefore(manualInputSection, tournamentTeamGrid.firstChild);
+        
+        // Add event listener for adding manual teams
+        const addButton = document.getElementById('add-manual-team');
+        const nameInput = document.getElementById('manual-team-name');
+        const eloInput = document.getElementById('manual-team-elo');
+        
+        addButton.addEventListener('click', () => {
+            const teamName = nameInput.value.trim();
+            const teamElo = parseInt(eloInput.value);
+            
+            if (!teamName || isNaN(teamElo) || teamElo < 0) {
+                alert('Bitte gib einen gültigen Team-Namen und ELO-Rating ein.');
+                return;
+            }
+            
+            // Create new team
+            const newTeam = {
+                id: 'manual_' + Date.now(),
+                name: teamName,
+                elo: teamElo,
+                country: teamName,
+                isManual: true
+            };
+            
+            // Add to selected teams
+            this.selectedTeams.push(newTeam);
+            
+            // Create and add team element
+            const teamElement = this.createTeamElement(newTeam, true);
+            teamElement.classList.add('selected');
+            teamElement.style.backgroundColor = 'var(--accent-primary)';
+            teamElement.style.borderColor = 'var(--accent-secondary)';
+            teamElement.querySelector('.selection-status').textContent = '✓ Ausgewählt';
+            
+            tournamentTeamGrid.appendChild(teamElement);
+            
+            // Clear inputs
+            nameInput.value = '';
+            eloInput.value = '';
+            
+            // Update count
+            const countSpan = document.getElementById('manual-teams-count');
+            countSpan.textContent = this.selectedTeams.length;
+            
+            console.log('Manual team added:', newTeam.name, 'Total selected:', this.selectedTeams.length);
+            
+            // Update tournament structure
+            this.updateTournamentStructure();
         });
-        
-        teamsGrid.appendChild(testTeam);
-        tournamentTeamGrid.appendChild(testTeam.cloneNode(true));
-        
-        console.log('Test team added to both grids');
     }
 
     // Create team element
@@ -1029,6 +1111,46 @@ const additionalStyles = `
         color: var(--accent-primary);
         margin-bottom: 1rem;
         text-align: center;
+    }
+
+    .manual-team-input {
+        grid-column: 1 / -1;
+        background: var(--bg-primary);
+        border: 2px solid var(--accent-primary);
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .manual-team-input h4 {
+        color: var(--accent-primary);
+        margin-bottom: 1rem;
+    }
+
+    .manual-team-input input[type="text"],
+    .manual-team-input input[type="number"] {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 0.5rem;
+        border-radius: 4px;
+        min-width: 150px;
+        width: 100px;
+    }
+
+    .manual-team-input button {
+        background: var(--accent-primary);
+        color: var(--bg-primary);
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .manual-team-input .manual-teams-count {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
     }
 `;
 
