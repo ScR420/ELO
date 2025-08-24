@@ -324,8 +324,6 @@ class ELOSimulator {
         
         if (!teamsGrid || !tournamentTeamGrid) {
             console.error('Grid elements not found!');
-            console.error('teams-grid:', teamsGrid);
-            console.error('team-grid:', tournamentTeamGrid);
             return;
         }
         
@@ -334,16 +332,6 @@ class ELOSimulator {
         tournamentTeamGrid.innerHTML = '';
         
         console.log('Teams to display:', this.teams);
-        console.log('Teams array length:', this.teams.length);
-        
-        // Test: Add a simple test team first
-        const testTeam = document.createElement('div');
-        testTeam.innerHTML = '<h4>TEST TEAM</h4><div>ELO: 2000</div>';
-        testTeam.style.border = '2px solid red';
-        testTeam.style.padding = '10px';
-        testTeam.style.margin = '10px';
-        teamsGrid.appendChild(testTeam);
-        tournamentTeamGrid.appendChild(testTeam.cloneNode(true));
         
         this.teams.forEach((team, index) => {
             console.log(`Creating element ${index + 1} for team:`, team.name);
@@ -359,15 +347,6 @@ class ELOSimulator {
         
         console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
         console.log('Tournament grid count:', tournamentTeamGrid.children.length);
-        
-        // Force a reflow to ensure elements are visible
-        teamsGrid.style.display = 'none';
-        teamsGrid.offsetHeight;
-        teamsGrid.style.display = 'grid';
-        
-        tournamentTeamGrid.style.display = 'none';
-        tournamentTeamGrid.offsetHeight;
-        tournamentTeamGrid.style.display = 'grid';
     }
 
     // Create team element
@@ -382,8 +361,30 @@ class ELOSimulator {
                 <h4>${team.name}</h4>
                 <div class="elo-rating">${team.elo}</div>
                 <div class="country">${team.country}</div>
+                <div class="selection-status">Klicken zum Auswählen</div>
             `;
-            teamDiv.addEventListener('click', () => this.toggleTeamSelection(team, teamDiv));
+            
+            // Make the entire div clickable
+            teamDiv.style.cursor = 'pointer';
+            teamDiv.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleTeamSelection(team, teamDiv);
+            });
+            
+            // Add hover effect
+            teamDiv.addEventListener('mouseenter', () => {
+                if (!teamDiv.classList.contains('selected')) {
+                    teamDiv.style.backgroundColor = 'var(--bg-tertiary)';
+                }
+            });
+            
+            teamDiv.addEventListener('mouseleave', () => {
+                if (!teamDiv.classList.contains('selected')) {
+                    teamDiv.style.backgroundColor = '';
+                }
+            });
+            
         } else {
             // Teams overview - editable ELO
             teamDiv.innerHTML = `
@@ -419,16 +420,29 @@ class ELOSimulator {
 
     // Toggle team selection for tournament
     toggleTeamSelection(team, element) {
+        console.log('Toggling team selection for:', team.name);
+        
         const isSelected = element.classList.contains('selected');
         
         if (isSelected) {
+            // Remove selection
             element.classList.remove('selected');
+            element.style.backgroundColor = '';
+            element.style.borderColor = '';
             this.selectedTeams = this.selectedTeams.filter(t => t.id !== team.id);
+            element.querySelector('.selection-status').textContent = 'Klicken zum Auswählen';
         } else {
+            // Add selection
             element.classList.add('selected');
+            element.style.backgroundColor = 'var(--accent-primary)';
+            element.style.borderColor = 'var(--accent-secondary)';
             this.selectedTeams.push(team);
+            element.querySelector('.selection-status').textContent = '✓ Ausgewählt';
         }
-
+        
+        console.log('Selected teams:', this.selectedTeams.map(t => t.name));
+        console.log('Selected teams count:', this.selectedTeams.length);
+        
         // Update tournament structure
         this.updateTournamentStructure();
     }
