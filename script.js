@@ -377,6 +377,31 @@ class ELOSimulator {
         
         console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
         console.log('Tournament grid count:', tournamentTeamGrid.children.length);
+        
+        // Debug: Make sure teams are visible
+        console.log('Teams grid display style:', teamsGrid.style.display);
+        console.log('Tournament grid display style:', tournamentTeamGrid.style.display);
+        
+        // Force teams to be visible
+        teamsGrid.style.display = 'grid';
+        tournamentTeamGrid.style.display = 'grid';
+        
+        // Add a simple test team that's definitely visible
+        const testTeam = document.createElement('div');
+        testTeam.innerHTML = '<h4>🔴 TEST TEAM - KLICKBAR</h4><div>ELO: 2000</div>';
+        testTeam.style.border = '3px solid red';
+        testTeam.style.padding = '15px';
+        testTeam.style.margin = '10px';
+        testTeam.style.backgroundColor = 'yellow';
+        testTeam.style.cursor = 'pointer';
+        testTeam.addEventListener('click', () => {
+            alert('Test Team wurde geklickt!');
+        });
+        
+        teamsGrid.appendChild(testTeam);
+        tournamentTeamGrid.appendChild(testTeam.cloneNode(true));
+        
+        console.log('Test team added to both grids');
     }
 
     // Create team element
