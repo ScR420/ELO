@@ -253,6 +253,49 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* Simulation Controls */
+.simulation-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.simulation-count {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-tertiary);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.simulation-count label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.simulation-input {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    width: 100px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.simulation-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 15px var(--shadow-color);
+}
+
 /* Simulate Button */
 .simulate-btn {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
@@ -708,6 +751,16 @@ body {
     
     .team-card {
         padding: 1rem;
+    }
+    
+    .simulation-controls {
+        gap: 1rem;
+    }
+    
+    .simulation-count {
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
     }
     
     .simulate-btn {

@@ -6,6 +6,12 @@ class ELOSimulator {
         this.selectedTeams = [];
         this.tournament = null;
         this.kFactor = 32; // Standard K-Faktor für Fußball
+        this.simulationStats = {
+            team1Wins: 0,
+            team2Wins: 0,
+            draws: 0,
+            totalGames: 0
+        };
         
         this.initializeEventListeners();
         this.populateTeamsGrid();
@@ -133,6 +139,7 @@ class ELOSimulator {
         const team1Elo = parseInt(document.getElementById('team1-elo').value);
         const team2Name = document.getElementById('team2-name').value;
         const team2Elo = parseInt(document.getElementById('team2-elo').value);
+        const simulationCount = parseInt(document.getElementById('simulation-count')?.value || 1);
 
         // Validation
         if (!team1Name || !team2Name || isNaN(team1Elo) || isNaN(team2Elo)) {
@@ -145,14 +152,42 @@ class ELOSimulator {
             return;
         }
 
-        // Calculate win probabilities
-        const team1WinProb = this.calculateELOProbability(team1Elo, team2Elo);
-        const team2WinProb = 1 - team1WinProb;
+        if (simulationCount < 1 || simulationCount > 1000) {
+            alert('Bitte gib eine Anzahl zwischen 1 und 1000 ein.');
+            return;
+        }
 
-        // Simulate match result using probabilities
+        // Reset statistics
+        this.simulationStats = {
+            team1Wins: 0,
+            team2Wins: 0,
+            draws: 0,
+            totalGames: 0
+        };
+
+        // Run simulations
+        for (let i = 0; i < simulationCount; i++) {
+            const result = this.runSingleSimulation(team1Elo, team2Elo);
+            this.updateSimulationStats(result);
+        }
+
+        // Display results
+        if (simulationCount === 1) {
+            // Single match - show detailed result
+            this.displayMatchResult(team1Name, team2Name, this.simulationStats.lastScore1, this.simulationStats.lastScore2, this.simulationStats.lastEloChanges);
+        } else {
+            // Multiple simulations - show statistics
+            this.displaySimulationStats(team1Name, team2Name);
+        }
+    }
+
+    // Run a single simulation
+    runSingleSimulation(elo1, elo2) {
+        const team1WinProb = this.calculateELOProbability(elo1, elo2);
         const random = Math.random();
+        
         let result, score1, score2;
-
+        
         if (random < team1WinProb) {
             // Team 1 wins
             result = 1;
@@ -170,11 +205,33 @@ class ELOSimulator {
             score1 = Math.floor(score2 * Math.random());
         }
 
-        // Calculate new ELO ratings
-        const eloChanges = this.calculateNewELO(team1Elo, team2Elo, result);
+        // Calculate ELO changes for the last simulation
+        const eloChanges = this.calculateNewELO(elo1, elo2, result);
+        
+        return {
+            result,
+            score1,
+            score2,
+            eloChanges
+        };
+    }
 
-        // Display results
-        this.displayMatchResult(team1Name, team2Name, score1, score2, eloChanges);
+    // Update simulation statistics
+    updateSimulationStats(simulationResult) {
+        this.simulationStats.totalGames++;
+        
+        if (simulationResult.result === 1) {
+            this.simulationStats.team1Wins++;
+        } else if (simulationResult.result === 0) {
+            this.simulationStats.team2Wins++;
+        } else {
+            this.simulationStats.draws++;
+        }
+
+        // Store last result for single match display
+        this.simulationStats.lastScore1 = simulationResult.score1;
+        this.simulationStats.lastScore2 = simulationResult.score2;
+        this.simulationStats.lastEloChanges = simulationResult.eloChanges;
     }
 
     // Display match result
@@ -208,6 +265,56 @@ class ELOSimulator {
         resultDiv.style.animation = 'fadeIn 0.5s ease-in';
     }
 
+    // Display simulation statistics
+    displaySimulationStats(team1Name, team2Name) {
+        const resultDiv = document.getElementById('match-result');
+        
+        const totalGames = this.simulationStats.totalGames;
+        const team1WinRate = ((this.simulationStats.team1Wins / totalGames) * 100).toFixed(1);
+        const team2WinRate = ((this.simulationStats.team2Wins / totalGames) * 100).toFixed(1);
+        const drawRate = ((this.simulationStats.draws / totalGames) * 100).toFixed(1);
+
+        // Update result display for statistics
+        resultDiv.innerHTML = `
+            <div class="result-header">
+                <h3>Simulations-Statistiken (${totalGames} Spiele)</h3>
+            </div>
+            <div class="stats-content">
+                <div class="stat-item">
+                    <span class="team-name">${team1Name}</span>
+                    <span class="stat-value">${this.simulationStats.team1Wins} Siege (${team1WinRate}%)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="team-name">Unentschieden</span>
+                    <span class="stat-value">${this.simulationStats.draws} (${drawRate}%)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="team-name">${team2Name}</span>
+                    <span class="stat-value">${this.simulationStats.team2Wins} Siege (${team2WinRate}%)</span>
+                </div>
+            </div>
+            <div class="last-result">
+                <h4>Letztes Spielergebnis:</h4>
+                <div class="result-content">
+                    <div class="team-result">
+                        <span class="team-name">${team1Name}</span>
+                        <span class="score">${this.simulationStats.lastScore1}</span>
+                    </div>
+                    <div class="team-result">
+                        <span class="team-name">${team2Name}</span>
+                        <span class="score">${this.simulationStats.lastScore2}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Show result with animation
+        resultDiv.classList.remove('hidden');
+        resultDiv.style.animation = 'none';
+        resultDiv.offsetHeight; // Trigger reflow
+        resultDiv.style.animation = 'fadeIn 0.5s ease-in';
+    }
+
     // Populate teams grid
     populateTeamsGrid() {
         const teamsGrid = document.getElementById('teams-grid');
@@ -228,17 +335,45 @@ class ELOSimulator {
         teamDiv.className = 'team-item';
         teamDiv.dataset.teamId = team.id;
         
-        teamDiv.innerHTML = `
-            <h4>${team.name}</h4>
-            <div class="elo-rating">${team.elo}</div>
-            <div class="country">${team.country}</div>
-        `;
-
         if (isTournament) {
+            // Tournament view - clickable for selection
+            teamDiv.innerHTML = `
+                <h4>${team.name}</h4>
+                <div class="elo-rating">${team.elo}</div>
+                <div class="country">${team.country}</div>
+            `;
             teamDiv.addEventListener('click', () => this.toggleTeamSelection(team, teamDiv));
+        } else {
+            // Teams overview - editable ELO
+            teamDiv.innerHTML = `
+                <h4>${team.name}</h4>
+                <div class="elo-editable">
+                    <label>ELO:</label>
+                    <input type="number" class="elo-input" value="${team.elo}" data-team-id="${team.id}">
+                </div>
+                <div class="country">${team.country}</div>
+            `;
+            
+            // Add event listener for ELO editing
+            const eloInput = teamDiv.querySelector('.elo-input');
+            eloInput.addEventListener('change', (e) => this.updateTeamELO(team.id, parseInt(e.target.value)));
         }
 
         return teamDiv;
+    }
+
+    // Update team ELO value
+    updateTeamELO(teamId, newElo) {
+        const team = this.teams.find(t => t.id === teamId);
+        if (team && !isNaN(newElo) && newElo > 0) {
+            team.elo = newElo;
+            
+            // Update tournament grid if it exists
+            const tournamentTeam = document.querySelector(`#team-grid [data-team-id="${teamId}"] .elo-rating`);
+            if (tournamentTeam) {
+                tournamentTeam.textContent = newElo;
+            }
+        }
     }
 
     // Toggle team selection for tournament
@@ -705,6 +840,70 @@ const additionalStyles = `
     .tournament-winner p {
         font-size: 1.2rem;
         font-weight: 600;
+    }
+
+    .elo-editable {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .elo-editable label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .elo-input {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        width: 80px;
+        font-size: 0.9rem;
+    }
+
+    .elo-input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 10px var(--shadow-color);
+    }
+
+    .stats-content {
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-primary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .stat-value {
+        font-weight: 600;
+        color: var(--accent-primary);
+        font-size: 1.1rem;
+    }
+
+    .last-result {
+        background: var(--bg-primary);
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        margin-top: 1rem;
+    }
+
+    .last-result h4 {
+        color: var(--accent-primary);
+        margin-bottom: 1rem;
+        text-align: center;
     }
 `;
 
