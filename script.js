@@ -324,6 +324,8 @@ class ELOSimulator {
         
         if (!teamsGrid || !tournamentTeamGrid) {
             console.error('Grid elements not found!');
+            console.error('teams-grid:', teamsGrid);
+            console.error('team-grid:', tournamentTeamGrid);
             return;
         }
         
@@ -332,9 +334,19 @@ class ELOSimulator {
         tournamentTeamGrid.innerHTML = '';
         
         console.log('Teams to display:', this.teams);
+        console.log('Teams array length:', this.teams.length);
         
-        this.teams.forEach(team => {
-            console.log('Creating element for team:', team.name);
+        // Test: Add a simple test team first
+        const testTeam = document.createElement('div');
+        testTeam.innerHTML = '<h4>TEST TEAM</h4><div>ELO: 2000</div>';
+        testTeam.style.border = '2px solid red';
+        testTeam.style.padding = '10px';
+        testTeam.style.margin = '10px';
+        teamsGrid.appendChild(testTeam);
+        tournamentTeamGrid.appendChild(testTeam.cloneNode(true));
+        
+        this.teams.forEach((team, index) => {
+            console.log(`Creating element ${index + 1} for team:`, team.name);
             
             // Teams overview tab (with editable ELO)
             const teamElement = this.createTeamElement(team, false);
@@ -347,6 +359,15 @@ class ELOSimulator {
         
         console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
         console.log('Tournament grid count:', tournamentTeamGrid.children.length);
+        
+        // Force a reflow to ensure elements are visible
+        teamsGrid.style.display = 'none';
+        teamsGrid.offsetHeight;
+        teamsGrid.style.display = 'grid';
+        
+        tournamentTeamGrid.style.display = 'none';
+        tournamentTeamGrid.offsetHeight;
+        tournamentTeamGrid.style.display = 'grid';
     }
 
     // Create team element
