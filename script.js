@@ -74,6 +74,8 @@ class ELOSimulator {
 
     // Switch between tabs
     switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+        
         // Hide all tab contents
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
@@ -85,8 +87,36 @@ class ELOSimulator {
         });
 
         // Show selected tab and activate button
-        document.getElementById(tabName).classList.add('active');
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        const targetTab = document.getElementById(tabName);
+        const targetButton = document.querySelector(`[data-tab="${tabName}"]`);
+        
+        if (!targetTab) {
+            console.error(`Tab with id "${tabName}" not found!`);
+            return;
+        }
+        
+        if (!targetButton) {
+            console.error(`Button with data-tab="${tabName}" not found!`);
+            return;
+        }
+        
+        targetTab.classList.add('active');
+        targetButton.classList.add('active');
+        
+        console.log(`Successfully switched to tab: ${tabName}`);
+        
+        // If switching to tournament tab, make sure teams are visible
+        if (tabName === 'tournament') {
+            console.log('Tournament tab activated, checking team grid...');
+            const teamGrid = document.getElementById('team-grid');
+            if (teamGrid) {
+                console.log('Team grid found, children count:', teamGrid.children.length);
+                // Force a refresh of the team display
+                teamGrid.style.display = 'none';
+                teamGrid.offsetHeight;
+                teamGrid.style.display = 'grid';
+            }
+        }
     }
 
     // Select preset team
