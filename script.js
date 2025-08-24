@@ -317,16 +317,36 @@ class ELOSimulator {
 
     // Populate teams grid
     populateTeamsGrid() {
+        console.log('Populating teams grid...');
+        
         const teamsGrid = document.getElementById('teams-grid');
         const tournamentTeamGrid = document.getElementById('team-grid');
         
+        if (!teamsGrid || !tournamentTeamGrid) {
+            console.error('Grid elements not found!');
+            return;
+        }
+        
+        // Clear existing content
+        teamsGrid.innerHTML = '';
+        tournamentTeamGrid.innerHTML = '';
+        
+        console.log('Teams to display:', this.teams);
+        
         this.teams.forEach(team => {
-            const teamElement = this.createTeamElement(team);
-            teamsGrid.appendChild(teamElement.cloneNode(true));
+            console.log('Creating element for team:', team.name);
             
+            // Teams overview tab (with editable ELO)
+            const teamElement = this.createTeamElement(team, false);
+            teamsGrid.appendChild(teamElement);
+            
+            // Tournament selection tab (clickable for selection)
             const tournamentTeamElement = this.createTeamElement(team, true);
             tournamentTeamGrid.appendChild(tournamentTeamElement);
         });
+        
+        console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
+        console.log('Tournament grid count:', tournamentTeamGrid.children.length);
     }
 
     // Create team element
