@@ -105,16 +105,32 @@ class ELOSimulator {
         
         console.log(`Successfully switched to tab: ${tabName}`);
         
-        // If switching to tournament tab, make sure teams are visible
+        // If switching to tournament tab, make sure teams are visible and populated
         if (tabName === 'tournament') {
             console.log('Tournament tab activated, checking team grid...');
             const teamGrid = document.getElementById('team-grid');
             if (teamGrid) {
                 console.log('Team grid found, children count:', teamGrid.children.length);
-                // Force a refresh of the team display
-                teamGrid.style.display = 'none';
-                teamGrid.offsetHeight;
+                
+                // If no teams are displayed, repopulate the grid
+                if (teamGrid.children.length === 0) {
+                    console.log('No teams in tournament grid, repopulating...');
+                    this.populateTeamsGrid();
+                }
+                
+                // Force teams to be visible
                 teamGrid.style.display = 'grid';
+                teamGrid.style.visibility = 'visible';
+                teamGrid.style.opacity = '1';
+                
+                // Make sure all team items are visible
+                teamGrid.querySelectorAll('.team-item').forEach(teamItem => {
+                    teamItem.style.display = 'block';
+                    teamItem.style.visibility = 'visible';
+                    teamItem.style.opacity = '1';
+                });
+                
+                console.log('Tournament grid refreshed, teams should now be visible');
             }
         }
     }
