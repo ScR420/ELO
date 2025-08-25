@@ -571,6 +571,26 @@ body {
     gap: 1rem;
 }
 
+.simulation-count-tournament {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-primary);
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-top: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.simulation-count-tournament label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+
 /* Teams Grid */
 .teams-overview {
     background: var(--bg-secondary);
@@ -720,6 +740,7 @@ body {
     padding: 1.5rem;
     border: 1px solid var(--border-color);
     overflow-x: auto;
+    margin-top: 2rem;
 }
 
 .tournament-bracket.hidden {
@@ -750,6 +771,7 @@ body {
     width: 100%;
     border-collapse: collapse;
     color: var(--text-secondary);
+    margin-top: 1rem;
 }
 
 .standings-table th,
@@ -770,6 +792,7 @@ body {
     border-radius: 8px;
     padding: 1rem;
     border: 1px solid var(--border-color);
+    margin-top: 2rem;
 }
 
 .knockout-results h4 {
@@ -820,6 +843,69 @@ body {
 .tournament-winner p {
     font-size: 1.2rem;
     font-weight: 600;
+}
+
+/* Tournament Summary */
+.tournament-summary {
+    background: var(--bg-tertiary);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px var(--shadow-color);
+    border: 1px solid var(--accent-primary);
+    margin-top: 3rem;
+}
+
+.tournament-summary.hidden {
+    display: none;
+}
+
+.tournament-summary .section-title {
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.summary-content h4 {
+    color: var(--accent-primary);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.winner-probabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.winner-probability-item {
+    background: var(--bg-primary);
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.winner-probability-item .team-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.winner-probability-item .probability {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Chart Styles */
+#winner-chart {
+    max-height: 400px;
+    width: 100% !important;
 }
 
 /* Responsive Design */
@@ -926,6 +1012,13 @@ body {
 
     .simulate-btn {
         padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+    }
+    .winner-probability-item {
+        min-width: 100px;
+        padding: 0.5rem 0.75rem;
+    }
+    .winner-probability-item .probability {
         font-size: 1rem;
     }
 }

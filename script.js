@@ -11,6 +11,13 @@ class ELOSimulator {
             totalGames: 0
         };
 
+        this.tournamentSimulationResults = {
+            winnerCounts: {},
+            teamStats: {},
+            placementCounts: {} // To store counts for 1st, 2nd, SF, QF
+        };
+        this.chartInstance = null; // To hold Chart.js instance
+
         this.initializeEventListeners();
         this.populateTeamsGrid();
     }
@@ -57,7 +64,7 @@ class ELOSimulator {
         document.getElementById('simulate-match').addEventListener('click', () => this.simulateMatch());
 
         document.getElementById('create-tournament').addEventListener('click', () => this.createTournament());
-        document.getElementById('simulate-tournament').addEventListener('click', () => this.simulateTournament());
+        document.getElementById('simulate-tournament').addEventListener('click', () => this.simulateMultipleTournaments());
 
         document.getElementById('group-count').addEventListener('change', () => this.updateTournamentStructure());
         document.getElementById('teams-per-group').addEventListener('change', () => this.updateTournamentStructure());
@@ -159,8 +166,8 @@ class ELOSimulator {
                 };
 
                 this.selectedTeams.push(newTeam);
-                this.teams.push(newTeam); // Add manual teams to main teams array
-                this.populateTeamsGrid(); // Repopulate both grids to include new team
+                this.teams.push(newTeam);
+                this.populateTeamsGrid();
                 const newTeamElement = document.querySelector(`#team-grid [data-team-id="${newTeam.id}"]`);
                 if (newTeamElement) {
                     newTeamElement.classList.add('selected');
@@ -541,6 +548,7 @@ class ELOSimulator {
             }
         } else {
             document.querySelector('.group-settings').classList.add('hidden');
+            const requiredKnockoutTeams = Math.pow(2, Math.ceil(Math.log2(this.selectedTeams.length)));
             if (this.selectedTeams.length < 2) {
                 simulateButton.disabled = true;
                 simulateButton.textContent = `Wähle mindestens 2 Teams aus`;
@@ -552,23 +560,349 @@ class ELOSimulator {
         simulateButton.innerHTML = `<i class="fas fa-play"></i> Turnier simulieren`;
     }
 
-    simulateTournament() {
+    // New: Simulate multiple tournaments
+    simulateMultipleTournaments() {
+        const numSimulations = parseInt(document.getElementById('tournament-simulation-count').value);
+        if (isNaN(numSimulations) || numSimulations < 1 || numSimulations > 1000) {
+            alert('Bitte gib eine Anzahl zwischen 1 und 1000 für die Turnier-Simulationen ein.');
+            return;
+        }
+
+        this.resetTournamentSimulationStats();
+        document.getElementById('tournament-bracket').classList.add('hidden'); // Hide single tournament view
+        document.getElementById('tournament-summary').classList.remove('hidden'); // Show summary
+
+        for (let i = 0; i < numSimulations; i++) {
+            this.simulateSingleTournament();
+            this.collectTournamentStats();
+        }
+
+        this.displayTournamentSummary(numSimulations);
+    }
+
+    resetTournamentSimulationStats() {
+        this.tournamentSimulationResults = {
+            winnerCounts: {},
+            teamStats: {},
+            placementCounts: {}
+        };
+        this.selectedTeams.forEach(team => {
+            this.tournamentSimulationResults.teamStats[team.id] = {
+                totalWins: 0,
+                totalDraws: 0,
+                totalLosses: 0,
+                totalGoalsFor: 0,
+                totalGoalsAgainst: 0,
+                totalElo: 0,
+                count: 0
+            };
+            this.tournamentSimulationResults.placementCounts[team.id] = {
+                winner: 0,
+                finalist: 0,
+                semifinalist: 0,
+                quarterfinalist: 0
+            };
+        });
+    }
+
+    simulateSingleTournament() {
         const tournamentType = document.querySelector('input[name="tournament-type"]:checked').value;
         const groupCount = parseInt(document.getElementById('group-count').value);
         const teamsPerGroup = parseInt(document.getElementById('teams-per-group').value);
 
-        const simulateButton = document.getElementById('simulate-tournament');
-        if (simulateButton.disabled) {
-            alert('Bitte wähle die benötigte Anzahl an Teams aus.');
-            return;
+        this.tournament = this.createTournamentStructure(tournamentType, groupCount, teamsPerGroup);
+        this.simulateTournamentMatches();
+    }
+
+    collectTournamentStats() {
+        if (this.tournament.winner && !this.tournament.winner.isBye) {
+            const winnerId = this.tournament.winner.id;
+            this.tournamentSimulationResults.winnerCounts[winnerId] = (this.tournamentSimulationResults.winnerCounts[winnerId] || 0) + 1;
+            this.tournamentSimulationResults.placementCounts[winnerId].winner++;
         }
 
-        this.tournament = this.createTournamentStructure(tournamentType, groupCount, teamsPerGroup);
+        // Collect team-specific stats (wins, losses, goals, ELO)
+        const allTeamsInTournament = this.selectedTeams;
 
-        this.simulateTournamentMatches();
+        // Determine finalists, semifinalists, quarterfinalists based on knockout rounds
+        const knockoutRounds = this.tournament.knockout;
+        if (knockoutRounds.length > 0) {
+            const finalRound = knockoutRounds[knockoutRounds.length - 1];
+            if (finalRound && finalRound.matches.length > 0) {
+                const finalMatch = finalRound.matches[0];
+                if (finalMatch.team1 && !finalMatch.team1.isBye) {
+                    this.tournamentSimulationResults.placementCounts[finalMatch.team1.id].finalist++;
+                }
+                if (finalMatch.team2 && !finalMatch.team2.isBye) {
+                    this.tournamentSimulationResults.placementCounts[finalMatch.team2.id].finalist++;
+                }
+            }
 
-        this.displayTournamentResults();
+            if (knockoutRounds.length > 1) {
+                const semiFinalRound = knockoutRounds[knockoutRounds.length - 2];
+                semiFinalRound.matches.forEach(match => {
+                    if (match.team1 && !match.team1.isBye) {
+                        this.tournamentSimulationResults.placementCounts[match.team1.id].semifinalist++;
+                    }
+                    if (match.team2 && !match.team2.isBye) {
+                        this.tournamentSimulationResults.placementCounts[match.team2.id].semifinalist++;
+                    }
+                });
+            }
+
+            if (knockoutRounds.length > 2) {
+                const quarterFinalRound = knockoutRounds[knockoutRounds.length - 3];
+                quarterFinalRound.matches.forEach(match => {
+                    if (match.team1 && !match.team1.isBye) {
+                        this.tournamentSimulationResults.placementCounts[match.team1.id].quarterfinalist++;
+                    }
+                    if (match.team2 && !match.team2.isBye) {
+                        this.tournamentSimulationResults.placementCounts[match.team2.id].quarterfinalist++;
+                    }
+                });
+            }
+        }
+
+
+        allTeamsInTournament.forEach(team => {
+            if (this.tournamentSimulationResults.teamStats[team.id]) {
+                const originalTeam = this.teams.find(t => t.id === team.id);
+                if (originalTeam) { // Ensure it's not a BYE
+                    this.tournamentSimulationResults.teamStats[team.id].totalElo += originalTeam.elo; // Use original ELO for average ELO calc
+                    this.tournamentSimulationResults.teamStats[team.id].count++;
+
+                    // For group stage stats (if applicable)
+                    if (this.tournament.type === 'groups') {
+                        this.tournament.groups.forEach(group => {
+                            const groupTeam = group.teams.find(t => t.id === team.id);
+                            if (groupTeam) {
+                                this.tournamentSimulationResults.teamStats[team.id].totalWins += groupTeam.wins;
+                                this.tournamentSimulationResults.teamStats[team.id].totalDraws += groupTeam.draws;
+                                this.tournamentSimulationResults.teamStats[team.id].totalLosses += groupTeam.losses;
+                                this.tournamentSimulationResults.teamStats[team.id].totalGoalsFor += groupTeam.goalsFor;
+                                this.tournamentSimulationResults.teamStats[team.id].totalGoalsAgainst += groupTeam.goalsAgainst;
+                            }
+                        });
+                    }
+                    // For knockout stage, you might aggregate wins/losses differently if needed
+                }
+            }
+        });
     }
+
+    displayTournamentSummary(totalSimulations) {
+        const summaryDiv = document.getElementById('tournament-summary');
+        summaryDiv.classList.remove('hidden');
+        document.getElementById('tournament-bracket').classList.add('hidden'); // Hide individual bracket if visible
+
+        this.updateWinnerProbabilities(totalSimulations);
+        this.updateAveragePlacementTable(totalSimulations);
+        this.updateAverageTeamStatsTable(totalSimulations);
+
+        summaryDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    updateWinnerProbabilities(totalSimulations) {
+        const winnerProbabilitiesDiv = document.getElementById('winner-probabilities');
+        winnerProbabilitiesDiv.innerHTML = ''; // Clear previous content
+
+        const winnerData = [];
+        const winnerLabels = [];
+        const winnerColors = [];
+
+        const sortedWinners = Object.entries(this.tournamentSimulationResults.winnerCounts)
+            .sort(([, countA], [, countB]) => countB - countA);
+
+        sortedWinners.forEach(([teamId, count]) => {
+            const team = this.teams.find(t => t.id === teamId);
+            if (team) {
+                const probability = ((count / totalSimulations) * 100).toFixed(1);
+                winnerProbabilitiesDiv.innerHTML += `
+                    <div class="winner-probability-item">
+                        <span class="team-name">${team.name}</span>
+                        <span class="probability">${probability}%</span>
+                    </div>
+                `;
+                winnerData.push(parseFloat(probability));
+                winnerLabels.push(team.name);
+                winnerColors.push(this.getRandomColor());
+            }
+        });
+
+        this.renderWinnerChart(winnerLabels, winnerData, winnerColors);
+    }
+
+    renderWinnerChart(labels, data, colors) {
+        const ctx = document.getElementById('winner-chart').getContext('2d');
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+        }
+        this.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Gewinnerwahrscheinlichkeit (%)',
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: colors.map(color => color.replace('0.2', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Wahrscheinlichkeit (%)',
+                            color: 'var(--text-secondary)'
+                        },
+                        ticks: {
+                            color: 'var(--text-secondary)'
+                        },
+                        grid: {
+                            color: 'rgba(204, 204, 204, 0.1)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Team',
+                            color: 'var(--text-secondary)'
+                        },
+                        ticks: {
+                            color: 'var(--text-secondary)'
+                        },
+                        grid: {
+                            color: 'rgba(204, 204, 204, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    updateAveragePlacementTable(totalSimulations) {
+        const tableBody = document.getElementById('avg-placement-table-body');
+        tableBody.innerHTML = '';
+
+        const placementStats = {};
+
+        this.selectedTeams.forEach(team => {
+            placementStats[team.id] = {
+                name: team.name,
+                winner: 0,
+                finalist: 0,
+                semifinalist: 0,
+                quarterfinalist: 0
+            };
+        });
+
+        // Initialize with raw counts from placementCounts
+        for (const teamId in this.tournamentSimulationResults.placementCounts) {
+            if (placementStats[teamId]) {
+                const counts = this.tournamentSimulationResults.placementCounts[teamId];
+                placementStats[teamId].winner = counts.winner;
+                placementStats[teamId].finalist = counts.finalist;
+                placementStats[teamId].semifinalist = counts.semifinalist;
+                placementStats[teamId].quarterfinalist = counts.quarterfinalist;
+            }
+        }
+
+        // Calculate actual placements. A winner is also a finalist, etc.
+        // So, adjust counts: a finalist that won shouldn't be counted *only* as a finalist.
+        const adjustedPlacementStats = {};
+        for(const teamId in placementStats) {
+            const stats = placementStats[teamId];
+            adjustedPlacementStats[teamId] = {
+                name: stats.name,
+                winner: (stats.winner / totalSimulations * 100).toFixed(1),
+                finalist: ((stats.finalist - stats.winner) / totalSimulations * 100).toFixed(1), // Finalist but not winner
+                semifinalist: ((stats.semifinalist - stats.finalist) / totalSimulations * 100).toFixed(1), // SF but not F
+                quarterfinalist: ((stats.quarterfinalist - stats.semifinalist) / totalSimulations * 100).toFixed(1) // QF but not SF
+            };
+        }
+
+
+        // Sort by winner probability
+        const sortedPlacementStats = Object.values(adjustedPlacementStats).sort((a, b) => parseFloat(b.winner) - parseFloat(a.winner));
+
+
+        sortedPlacementStats.forEach(stats => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${stats.name}</td>
+                    <td>${stats.winner}%</td>
+                    <td>${stats.finalist}%</td>
+                    <td>${stats.semifinalist}%</td>
+                    <td>${stats.quarterfinalist}%</td>
+                </tr>
+            `;
+        });
+    }
+
+
+    updateAverageTeamStatsTable(totalSimulations) {
+        const tableBody = document.getElementById('avg-team-stats-table-body');
+        tableBody.innerHTML = '';
+
+        const teamStatsData = [];
+
+        this.selectedTeams.forEach(team => {
+            const stats = this.tournamentSimulationResults.teamStats[team.id];
+            if (stats && stats.count > 0) {
+                teamStatsData.push({
+                    name: team.name,
+                    avgWins: (stats.totalWins / stats.count).toFixed(2),
+                    avgDraws: (stats.totalDraws / stats.count).toFixed(2),
+                    avgLosses: (stats.totalLosses / stats.count).toFixed(2),
+                    avgGoalsFor: (stats.totalGoalsFor / stats.count).toFixed(2),
+                    avgGoalsAgainst: (stats.totalGoalsAgainst / stats.count).toFixed(2),
+                    avgElo: (stats.totalElo / stats.count).toFixed(0)
+                });
+            }
+        });
+
+        // Sort by average ELO (descending)
+        const sortedTeamStats = teamStatsData.sort((a, b) => parseFloat(b.avgElo) - parseFloat(a.avgElo));
+
+        sortedTeamStats.forEach(stats => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td>${stats.name}</td>
+                    <td>${stats.avgWins}</td>
+                    <td>${stats.avgDraws}</td>
+                    <td>${stats.avgLosses}</td>
+                    <td>${stats.avgGoalsFor}</td>
+                    <td>${stats.avgGoalsAgainst}</td>
+                    <td>${stats.avgElo}</td>
+                </tr>
+            `;
+        });
+    }
+
+    getRandomColor() {
+        const r = Math.floor(Math.random() * 255);
+        const g = Math.floor(Math.random() * 255);
+        const b = Math.floor(Math.random() * 255);
+        return `rgba(${r}, ${g}, ${b}, 0.6)`;
+    }
+
 
     createTournamentStructure(type, groupCount, teamsPerGroup) {
         const tournament = {
@@ -615,6 +949,9 @@ class ELOSimulator {
         let currentRoundTeams = [...teams];
         let roundNum = 1;
 
+        // Clone teams to ensure each simulation starts with fresh team objects
+        currentRoundTeams = currentRoundTeams.map(team => ({ ...team }));
+
         while (currentRoundTeams.length > 1) {
             let nextRoundTeams = [];
             let roundMatches = [];
@@ -624,7 +961,6 @@ class ELOSimulator {
                 numByes = requiredTeams - currentRoundTeams.length;
             }
 
-            // Add byes to fill up the bracket to a power of 2
             for (let i = 0; i < numByes; i++) {
                 currentRoundTeams.splice(Math.floor(Math.random() * (currentRoundTeams.length + 1)), 0, { name: 'BYE', elo: 0, isBye: true, id: 'bye_' + Date.now() + i });
             }
@@ -645,13 +981,12 @@ class ELOSimulator {
                     played: false,
                     winner: null
                 });
-                nextRoundTeams.push(null);
             }
             bracket.push({
                 round: roundNum,
                 matches: roundMatches
             });
-            currentRoundTeams = nextRoundTeams;
+            currentRoundTeams = []; // Reset for next round winners
             roundNum++;
         }
         return bracket;
@@ -748,20 +1083,21 @@ class ELOSimulator {
     }
 
     simulateDirectKnockout() {
-        for (let roundIndex = 0; roundIndex < this.tournament.knockout.length; roundIndex++) {
-            const currentRound = this.tournament.knockout[roundIndex];
-            const nextRoundMatches = [];
+        const numRounds = this.tournament.knockout.length;
 
-            for (let matchIndex = 0; matchIndex < currentRound.matches.length; matchIndex++) {
-                const match = currentRound.matches[matchIndex];
+        for (let roundIndex = 0; roundIndex < numRounds; roundIndex++) {
+            const currentRound = this.tournament.knockout[roundIndex];
+            const winnersOfThisRound = [];
+
+            currentRound.matches.forEach(match => {
                 let winnerTeam = null;
 
                 if (match.team1.isBye && match.team2.isBye) {
                     winnerTeam = null;
                 } else if (match.team1.isBye) {
-                    winnerTeam = match.team2;
+                    winnerTeam = { ...match.team2 };
                 } else if (match.team2.isBye) {
-                    winnerTeam = match.team1;
+                    winnerTeam = { ...match.team1 };
                 } else {
                     const result = this.simulateMatchResult(match.team1, match.team2);
                     match.score1 = result.score1;
@@ -769,34 +1105,39 @@ class ELOSimulator {
                     match.played = true;
 
                     if (match.score1 > match.score2) {
-                        winnerTeam = match.team1;
+                        winnerTeam = { ...match.team1 };
                     } else if (match.score1 < match.score2) {
-                        winnerTeam = match.team2;
+                        winnerTeam = { ...match.team2 };
                     } else {
-                        winnerTeam = Math.random() < 0.5 ? match.team1 : match.team2;
-                        match.score1++; // Resolve tie for knockout
+                        winnerTeam = Math.random() < 0.5 ? { ...match.team1 } : { ...match.team2 };
                     }
                 }
                 match.winner = winnerTeam;
-                if (winnerTeam) {
-                    nextRoundMatches.push(winnerTeam);
+                if (winnerTeam && !winnerTeam.isBye) {
+                    winnersOfThisRound.push(winnerTeam);
+                }
+            });
+
+            if (roundIndex < numRounds - 1) {
+                // Prepare the next round's matches using winnersOfThisRound
+                const nextRoundBracket = this.createKnockoutBracket(winnersOfThisRound);
+                if (nextRoundBracket.length > 0) {
+                    this.tournament.knockout[roundIndex + 1].matches = nextRoundBracket[0].matches;
+                }
+            } else {
+                // Final round, determine overall winner
+                if (currentRound.matches[0] && currentRound.matches[0].winner && !currentRound.matches[0].winner.isBye) {
+                    this.tournament.winner = currentRound.matches[0].winner;
                 }
             }
-
-            if (roundIndex < this.tournament.knockout.length - 1) {
-                const nextRoundBracket = this.createKnockoutBracket(nextRoundMatches);
-                this.tournament.knockout[roundIndex + 1].matches = nextRoundBracket[0].matches;
-            }
-        }
-        const finalRound = this.tournament.knockout[this.tournament.knockout.length - 1];
-        if (finalRound && finalRound.matches[0] && finalRound.matches[0].winner) {
-            this.tournament.winner = finalRound.matches[0].winner;
         }
     }
+
 
     displayTournamentResults() {
         const bracketDiv = document.getElementById('tournament-bracket');
         bracketDiv.classList.remove('hidden');
+        document.getElementById('tournament-summary').classList.add('hidden'); // Hide summary if showing a single bracket
 
         let html = '<h3 class="section-title">Turnierergebnisse</h3>';
 
