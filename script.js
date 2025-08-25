@@ -1,23 +1,20 @@
-// ELO Football Simulator - Main JavaScript File
-
 class ELOSimulator {
     constructor() {
         this.teams = this.initializeTeams();
         this.selectedTeams = [];
         this.tournament = null;
-        this.kFactor = 32; // Standard K-Faktor für Fußball
+        this.kFactor = 32;
         this.simulationStats = {
             team1Wins: 0,
             team2Wins: 0,
             draws: 0,
             totalGames: 0
         };
-        
+
         this.initializeEventListeners();
         this.populateTeamsGrid();
     }
 
-    // Initialize predefined teams with ELO ratings
     initializeTeams() {
         return [
             { id: 'germany', name: 'Deutschland', elo: 1950, country: 'Deutschland' },
@@ -48,187 +45,111 @@ class ELOSimulator {
         ];
     }
 
-    // Initialize all event listeners
     initializeEventListeners() {
-        // Tab navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
         });
 
-        // Preset team buttons
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.selectPresetTeam(e.target.dataset.team));
         });
 
-        // Simulate match button
         document.getElementById('simulate-match').addEventListener('click', () => this.simulateMatch());
 
-        // Tournament controls
         document.getElementById('create-tournament').addEventListener('click', () => this.createTournament());
         document.getElementById('simulate-tournament').addEventListener('click', () => this.simulateTournament());
 
-        // Tournament structure changes
         document.getElementById('group-count').addEventListener('change', () => this.updateTournamentStructure());
         document.getElementById('teams-per-group').addEventListener('change', () => this.updateTournamentStructure());
+
+        document.querySelectorAll('input[name="tournament-type"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                const groupSettings = document.querySelector('.group-settings');
+                if (document.querySelector('input[name="tournament-type"]:checked').value === 'groups') {
+                    groupSettings.classList.remove('hidden');
+                } else {
+                    groupSettings.classList.add('hidden');
+                }
+                this.updateTournamentStructure();
+            });
+        });
+        document.querySelector('.group-settings').classList.remove('hidden');
     }
 
-    // Switch between tabs
     switchTab(tabName) {
-        console.log('Switching to tab:', tabName);
-        
-        // Hide all tab contents
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
         });
 
-        // Remove active class from all nav buttons
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.remove('active');
         });
 
-        // Show selected tab and activate button
         const targetTab = document.getElementById(tabName);
         const targetButton = document.querySelector(`[data-tab="${tabName}"]`);
-        
-        if (!targetTab) {
-            console.error(`Tab with id "${tabName}" not found!`);
+
+        if (!targetTab || !targetButton) {
             return;
         }
-        
-        if (!targetButton) {
-            console.error(`Button with data-tab="${tabName}" not found!`);
-            return;
-        }
-        
+
         targetTab.classList.add('active');
         targetButton.classList.add('active');
-        
-        console.log(`Successfully switched to tab: ${tabName}`);
-        
-        // If switching to tournament tab, make sure teams are visible and populated
+
         if (tabName === 'tournament') {
-            console.log('Tournament tab activated, checking team grid...');
-            const teamGrid = document.getElementById('team-grid');
-            if (teamGrid) {
-                console.log('Team grid found, children count:', teamGrid.children.length);
-                
-                // Always add manual input when switching to tournament tab
+            const tournamentTeamGrid = document.getElementById('team-grid');
+            if (tournamentTeamGrid) {
                 this.ensureManualTeamInput();
-                
-                // Force teams to be visible
-                teamGrid.style.display = 'grid';
-                teamGrid.style.visibility = 'visible';
-                teamGrid.style.opacity = '1';
-                
-                // Make sure all team items are visible
-                teamGrid.querySelectorAll('.team-item').forEach(teamItem => {
-                    teamItem.style.display = 'block';
-                    teamItem.style.visibility = 'visible';
-                    teamItem.style.opacity = '1';
-                });
-                
-                console.log('Tournament grid refreshed, teams should now be visible');
+                tournamentTeamGrid.style.display = 'grid';
             }
         }
     }
 
-    // Ensure manual team input is present
     ensureManualTeamInput() {
         const tournamentTeamGrid = document.getElementById('team-grid');
         if (!tournamentTeamGrid) return;
-        
-        // Check if manual input already exists
+
         if (tournamentTeamGrid.querySelector('.manual-team-input')) {
-            console.log('Manual team input already exists');
             return;
         }
-        
-        console.log('Adding manual team input...');
         this.addManualTeamInput();
     }
 
-    // Add manual team input for tournaments
     addManualTeamInput() {
         const tournamentTeamGrid = document.getElementById('team-grid');
         if (!tournamentTeamGrid) {
-            console.error('Tournament team grid not found!');
             return;
         }
-        
-        console.log('Creating manual team input section...');
-        
-        // Create manual input section
+
         const manualInputSection = document.createElement('div');
         manualInputSection.className = 'manual-team-input';
-        manualInputSection.style.cssText = `
-            grid-column: 1 / -1;
-            background: var(--bg-primary);
-            border: 3px solid var(--accent-primary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-            box-shadow: 0 0 20px var(--shadow-color);
-        `;
-        
         manualInputSection.innerHTML = `
-            <h3 style="color: var(--accent-primary); margin-bottom: 1rem; text-align: center; font-size: 1.2rem;">🏆 Manuell Team hinzufügen</h3>
-            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: center;">
-                <input type="text" id="manual-team-name" placeholder="Team Name" style="
-                    background: var(--bg-tertiary);
-                    border: 2px solid var(--border-color);
-                    color: var(--text-primary);
-                    padding: 0.75rem;
-                    border-radius: 6px;
-                    min-width: 180px;
-                    font-size: 1rem;
-                ">
-                <input type="number" id="manual-team-elo" placeholder="ELO Rating" style="
-                    background: var(--bg-tertiary);
-                    border: 2px solid var(--border-color);
-                    color: var(--text-primary);
-                    padding: 0.75rem;
-                    border-radius: 6px;
-                    width: 120px;
-                    font-size: 1rem;
-                ">
-                <button id="add-manual-team" style="
-                    background: var(--accent-primary);
-                    color: var(--bg-primary);
-                    border: none;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">➕ Team hinzufügen</button>
+            <h3>🏆 Manuell Team hinzufügen</h3>
+            <div class="input-group">
+                <input type="text" id="manual-team-name" placeholder="Team Name">
+                <input type="number" id="manual-team-elo" placeholder="ELO Rating">
+                <button id="add-manual-team">➕ Team hinzufügen</button>
             </div>
             <div style="margin-top: 1rem; color: var(--text-secondary); font-size: 0.9rem; text-align: center;">
-                Hinzugefügte Teams: <span id="manual-teams-count" style="color: var(--accent-primary); font-weight: bold;">0</span>
+                Hinzugefügte Teams: <span id="manual-teams-count" style="color: var(--accent-primary); font-weight: bold;">${this.selectedTeams.filter(t => t.isManual).length}</span>
             </div>
         `;
-        
-        // Insert at the very beginning of the tournament grid
+
         tournamentTeamGrid.insertBefore(manualInputSection, tournamentTeamGrid.firstChild);
-        
-        console.log('Manual team input section added to tournament grid');
-        
-        // Add event listener for adding manual teams
+
         const addButton = document.getElementById('add-manual-team');
         const nameInput = document.getElementById('manual-team-name');
         const eloInput = document.getElementById('manual-team-elo');
-        
+
         if (addButton && nameInput && eloInput) {
             addButton.addEventListener('click', () => {
                 const teamName = nameInput.value.trim();
                 const teamElo = parseInt(eloInput.value);
-                
+
                 if (!teamName || isNaN(teamElo) || teamElo < 0) {
                     alert('Bitte gib einen gültigen Team-Namen und ELO-Rating ein.');
                     return;
                 }
-                
-                // Create new team
+
                 const newTeam = {
                     id: 'manual_' + Date.now(),
                     name: teamName,
@@ -236,70 +157,56 @@ class ELOSimulator {
                     country: teamName,
                     isManual: true
                 };
-                
-                // Add to selected teams
+
                 this.selectedTeams.push(newTeam);
-                
-                // Create and add team element
-                const teamElement = this.createTeamElement(newTeam, true);
-                teamElement.classList.add('selected');
-                teamElement.style.backgroundColor = 'var(--accent-primary)';
-                teamElement.style.borderColor = 'var(--accent-secondary)';
-                teamElement.querySelector('.selection-status').textContent = '✓ Ausgewählt';
-                
-                tournamentTeamGrid.appendChild(teamElement);
-                
-                // Clear inputs
+                this.teams.push(newTeam); // Add manual teams to main teams array
+                this.populateTeamsGrid(); // Repopulate both grids to include new team
+                const newTeamElement = document.querySelector(`#team-grid [data-team-id="${newTeam.id}"]`);
+                if (newTeamElement) {
+                    newTeamElement.classList.add('selected');
+                    newTeamElement.style.backgroundColor = 'var(--accent-primary)';
+                    newTeamElement.style.borderColor = 'var(--accent-secondary)';
+                    newTeamElement.querySelector('.selection-status').textContent = '✓ Ausgewählt';
+                }
+
                 nameInput.value = '';
                 eloInput.value = '';
-                
-                // Update count
+
                 const countSpan = document.getElementById('manual-teams-count');
                 if (countSpan) {
-                    countSpan.textContent = this.selectedTeams.length;
+                    countSpan.textContent = this.selectedTeams.filter(t => t.isManual).length;
                 }
-                
-                console.log('Manual team added:', newTeam.name, 'Total selected:', this.selectedTeams.length);
-                
-                // Update tournament structure
                 this.updateTournamentStructure();
             });
-            
-            console.log('Event listeners added to manual team input');
-        } else {
-            console.error('Some elements of manual team input not found!');
         }
     }
 
-    // Select preset team
     selectPresetTeam(teamId) {
         const team = this.teams.find(t => t.id === teamId);
         if (!team) return;
 
-        // Find which team slot to fill (check if team1 or team2 inputs are empty)
-        const team1Name = document.getElementById('team1-name').value;
-        const team2Name = document.getElementById('team2-name').value;
+        const team1NameInput = document.getElementById('team1-name');
+        const team1EloInput = document.getElementById('team1-elo');
+        const team2NameInput = document.getElementById('team2-name');
+        const team2EloInput = document.getElementById('team2-elo');
 
-        if (!team1Name) {
-            document.getElementById('team1-name').value = team.name;
-            document.getElementById('team1-elo').value = team.elo;
-        } else if (!team2Name) {
-            document.getElementById('team2-name').value = team.name;
-            document.getElementById('team2-elo').value = team.elo;
+        if (!team1NameInput.value) {
+            team1NameInput.value = team.name;
+            team1EloInput.value = team.elo;
+        } else if (!team2NameInput.value) {
+            team2NameInput.value = team.name;
+            team2EloInput.value = team.elo;
         } else {
-            // Both filled, replace team2
-            document.getElementById('team2-name').value = team.name;
-            document.getElementById('team2-elo').value = team.elo;
+            team2NameInput.value = team.name;
+            team2EloInput.value = team.elo;
         }
     }
 
-    // Calculate ELO probability
     calculateELOProbability(elo1, elo2) {
         const eloDiff = elo2 - elo1;
         return 1 / (1 + Math.pow(10, eloDiff / 400));
     }
 
-    // Calculate new ELO ratings
     calculateNewELO(elo1, elo2, result) {
         const expected1 = this.calculateELOProbability(elo1, elo2);
         const expected2 = 1 - expected1;
@@ -315,7 +222,6 @@ class ELOSimulator {
         };
     }
 
-    // Simulate a single match
     simulateMatch() {
         const team1Name = document.getElementById('team1-name').value;
         const team1Elo = parseInt(document.getElementById('team1-elo').value);
@@ -323,7 +229,6 @@ class ELOSimulator {
         const team2Elo = parseInt(document.getElementById('team2-elo').value);
         const simulationCount = parseInt(document.getElementById('simulation-count')?.value || 1);
 
-        // Validation
         if (!team1Name || !team2Name || isNaN(team1Elo) || isNaN(team2Elo)) {
             alert('Bitte fülle alle Felder korrekt aus.');
             return;
@@ -339,7 +244,6 @@ class ELOSimulator {
             return;
         }
 
-        // Reset statistics
         this.simulationStats = {
             team1Wins: 0,
             team2Wins: 0,
@@ -347,49 +251,40 @@ class ELOSimulator {
             totalGames: 0
         };
 
-        // Run simulations
         for (let i = 0; i < simulationCount; i++) {
             const result = this.runSingleSimulation(team1Elo, team2Elo);
             this.updateSimulationStats(result);
         }
 
-        // Display results
         if (simulationCount === 1) {
-            // Single match - show detailed result
             this.displayMatchResult(team1Name, team2Name, this.simulationStats.lastScore1, this.simulationStats.lastScore2, this.simulationStats.lastEloChanges);
         } else {
-            // Multiple simulations - show statistics
             this.displaySimulationStats(team1Name, team2Name);
         }
     }
 
-    // Run a single simulation
     runSingleSimulation(elo1, elo2) {
         const team1WinProb = this.calculateELOProbability(elo1, elo2);
         const random = Math.random();
-        
+
         let result, score1, score2;
-        
-        if (random < team1WinProb) {
-            // Team 1 wins
+
+        if (random < team1WinProb * 0.7) {
             result = 1;
             score1 = Math.floor(Math.random() * 3) + 1;
-            score2 = Math.floor(score1 * Math.random());
-        } else if (random < team1WinProb + 0.2) {
-            // Draw
+            score2 = Math.floor(Math.random() * Math.min(score1, 2));
+        } else if (random < team1WinProb * 0.7 + 0.2) {
             result = 0.5;
             score1 = Math.floor(Math.random() * 3);
             score2 = score1;
         } else {
-            // Team 2 wins
             result = 0;
             score2 = Math.floor(Math.random() * 3) + 1;
-            score1 = Math.floor(score2 * Math.random());
+            score1 = Math.floor(Math.random() * Math.min(score2, 2));
         }
 
-        // Calculate ELO changes for the last simulation
         const eloChanges = this.calculateNewELO(elo1, elo2, result);
-        
+
         return {
             result,
             score1,
@@ -398,10 +293,9 @@ class ELOSimulator {
         };
     }
 
-    // Update simulation statistics
     updateSimulationStats(simulationResult) {
         this.simulationStats.totalGames++;
-        
+
         if (simulationResult.result === 1) {
             this.simulationStats.team1Wins++;
         } else if (simulationResult.result === 0) {
@@ -410,53 +304,64 @@ class ELOSimulator {
             this.simulationStats.draws++;
         }
 
-        // Store last result for single match display
         this.simulationStats.lastScore1 = simulationResult.score1;
         this.simulationStats.lastScore2 = simulationResult.score2;
         this.simulationStats.lastEloChanges = simulationResult.eloChanges;
     }
 
-    // Display match result
     displayMatchResult(team1Name, team2Name, score1, score2, eloChanges) {
         const resultDiv = document.getElementById('match-result');
-        
-        // Set team names and scores
-        document.getElementById('result-team1').textContent = team1Name;
-        document.getElementById('result-team2').textContent = team2Name;
-        document.getElementById('score-team1').textContent = score1;
-        document.getElementById('score-team2').textContent = score2;
 
-        // Set ELO changes
-        const eloChange1 = document.getElementById('elo-change1');
-        const eloChange2 = document.getElementById('elo-change2');
-        
-        eloChange1.textContent = `${eloChanges.change1 > 0 ? '+' : ''}${eloChanges.change1}`;
-        eloChange2.textContent = `${eloChanges.change2 > 0 ? '+' : ''}${eloChanges.change2}`;
-        
-        eloChange1.className = `elo-delta ${eloChanges.change1 > 0 ? 'positive' : 'negative'}`;
-        eloChange2.className = `elo-delta ${eloChanges.change2 > 0 ? 'positive' : 'negative'}`;
+        resultDiv.innerHTML = `
+            <div class="result-header">
+                <h3>Spielergebnis</h3>
+            </div>
+            <div class="result-content">
+                <div class="team-result">
+                    <span class="team-name" id="result-team1">${team1Name}</span>
+                    <span class="score" id="score-team1">${score1}</span>
+                </div>
+                <div class="team-result">
+                    <span class="team-name" id="result-team2">${team2Name}</span>
+                    <span class="score" id="score-team2">${score2}</span>
+                </div>
+            </div>
+            <div class="elo-changes">
+                <div class="elo-change">
+                    <span>ELO Änderung Team 1:</span>
+                    <span id="elo-change1" class="elo-delta ${eloChanges.change1 > 0 ? 'positive' : 'negative'}">${eloChanges.change1 > 0 ? '+' : ''}${eloChanges.change1}</span>
+                </div>
+                <div class="elo-change">
+                    <span>ELO Änderung Team 2:</span>
+                    <span id="elo-change2" class="elo-delta ${eloChanges.change2 > 0 ? 'positive' : 'negative'}">${eloChanges.change2 > 0 ? '+' : ''}${eloChanges.change2}</span>
+                </div>
+            </div>
+            <div class="new-ratings">
+                <div class="new-rating">
+                    <span>Neues ELO Team 1:</span>
+                    <span id="new-elo1">${eloChanges.newElo1}</span>
+                </div>
+                <div class="new-rating">
+                    <span>Neues ELO Team 2:</span>
+                    <span id="new-elo2">${eloChanges.newElo2}</span>
+                </div>
+            </div>
+        `;
 
-        // Set new ELO ratings
-        document.getElementById('new-elo1').textContent = eloChanges.newElo1;
-        document.getElementById('new-elo2').textContent = eloChanges.newElo2;
-
-        // Show result with animation
         resultDiv.classList.remove('hidden');
         resultDiv.style.animation = 'none';
-        resultDiv.offsetHeight; // Trigger reflow
+        resultDiv.offsetHeight;
         resultDiv.style.animation = 'fadeIn 0.5s ease-in';
     }
 
-    // Display simulation statistics
     displaySimulationStats(team1Name, team2Name) {
         const resultDiv = document.getElementById('match-result');
-        
+
         const totalGames = this.simulationStats.totalGames;
         const team1WinRate = ((this.simulationStats.team1Wins / totalGames) * 100).toFixed(1);
         const team2WinRate = ((this.simulationStats.team2Wins / totalGames) * 100).toFixed(1);
         const drawRate = ((this.simulationStats.draws / totalGames) * 100).toFixed(1);
 
-        // Update result display for statistics
         resultDiv.innerHTML = `
             <div class="result-header">
                 <h3>Simulations-Statistiken (${totalGames} Spiele)</h3>
@@ -490,88 +395,80 @@ class ELOSimulator {
             </div>
         `;
 
-        // Show result with animation
         resultDiv.classList.remove('hidden');
         resultDiv.style.animation = 'none';
-        resultDiv.offsetHeight; // Trigger reflow
+        resultDiv.offsetHeight;
         resultDiv.style.animation = 'fadeIn 0.5s ease-in';
     }
 
-    // Populate teams grid
     populateTeamsGrid() {
-        console.log('Populating teams grid...');
-        
         const teamsGrid = document.getElementById('teams-grid');
         const tournamentTeamGrid = document.getElementById('team-grid');
-        
+
         if (!teamsGrid || !tournamentTeamGrid) {
-            console.error('Grid elements not found!');
             return;
         }
-        
-        // Clear existing content
+
         teamsGrid.innerHTML = '';
+        const manualInput = tournamentTeamGrid.querySelector('.manual-team-input');
         tournamentTeamGrid.innerHTML = '';
-        
-        console.log('Teams to display:', this.teams);
-        
-        this.teams.forEach((team, index) => {
-            console.log(`Creating element ${index + 1} for team:`, team.name);
-            
-            // Teams overview tab (with editable ELO)
+        if (manualInput) {
+            tournamentTeamGrid.appendChild(manualInput);
+        }
+
+        this.teams.forEach(team => {
             const teamElement = this.createTeamElement(team, false);
             teamsGrid.appendChild(teamElement);
-            
-            // Tournament selection tab (clickable for selection)
+
             const tournamentTeamElement = this.createTeamElement(team, true);
             tournamentTeamGrid.appendChild(tournamentTeamElement);
+
+            if (this.selectedTeams.some(t => t.id === team.id)) {
+                tournamentTeamElement.classList.add('selected');
+                tournamentTeamElement.style.backgroundColor = 'var(--accent-primary)';
+                tournamentTeamElement.style.borderColor = 'var(--accent-secondary)';
+                tournamentTeamElement.querySelector('.selection-status').textContent = '✓ Ausgewählt';
+            }
         });
-        
-        console.log('Teams grid populated. Teams overview count:', teamsGrid.children.length);
-        console.log('Tournament grid count:', tournamentTeamGrid.children.length);
-        
-        // Add manual team input for tournaments
-        this.addManualTeamInput();
+        const countSpan = document.getElementById('manual-teams-count');
+        if (countSpan) {
+            countSpan.textContent = this.selectedTeams.filter(t => t.isManual).length;
+        }
     }
 
-    // Create team element
     createTeamElement(team, isTournament = false) {
         const teamDiv = document.createElement('div');
         teamDiv.className = 'team-item';
         teamDiv.dataset.teamId = team.id;
-        
+
         if (isTournament) {
-            // Tournament view - clickable for selection
             teamDiv.innerHTML = `
                 <h4>${team.name}</h4>
                 <div class="elo-rating">${team.elo}</div>
                 <div class="country">${team.country}</div>
                 <div class="selection-status">Klicken zum Auswählen</div>
             `;
-            
-            // Make the entire div clickable
+
             teamDiv.style.cursor = 'pointer';
             teamDiv.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this.toggleTeamSelection(team, teamDiv);
             });
-            
-            // Add hover effect
+
             teamDiv.addEventListener('mouseenter', () => {
                 if (!teamDiv.classList.contains('selected')) {
                     teamDiv.style.backgroundColor = 'var(--bg-tertiary)';
                 }
             });
-            
+
             teamDiv.addEventListener('mouseleave', () => {
                 if (!teamDiv.classList.contains('selected')) {
                     teamDiv.style.backgroundColor = '';
                 }
             });
-            
+
         } else {
-            // Teams overview - editable ELO
             teamDiv.innerHTML = `
                 <h4>${team.name}</h4>
                 <div class="elo-editable">
@@ -580,8 +477,7 @@ class ELOSimulator {
                 </div>
                 <div class="country">${team.country}</div>
             `;
-            
-            // Add event listener for ELO editing
+
             const eloInput = teamDiv.querySelector('.elo-input');
             eloInput.addEventListener('change', (e) => this.updateTeamELO(team.id, parseInt(e.target.value)));
         }
@@ -589,13 +485,11 @@ class ELOSimulator {
         return teamDiv;
     }
 
-    // Update team ELO value
     updateTeamELO(teamId, newElo) {
-        const team = this.teams.find(t => t.id === teamId);
-        if (team && !isNaN(newElo) && newElo > 0) {
-            team.elo = newElo;
-            
-            // Update tournament grid if it exists
+        const teamIndex = this.teams.findIndex(t => t.id === teamId);
+        if (teamIndex !== -1 && !isNaN(newElo) && newElo > 0) {
+            this.teams[teamIndex].elo = newElo;
+
             const tournamentTeam = document.querySelector(`#team-grid [data-team-id="${teamId}"] .elo-rating`);
             if (tournamentTeam) {
                 tournamentTeam.textContent = newElo;
@@ -603,85 +497,79 @@ class ELOSimulator {
         }
     }
 
-    // Toggle team selection for tournament
     toggleTeamSelection(team, element) {
-        console.log('Toggling team selection for:', team.name);
-        
         const isSelected = element.classList.contains('selected');
-        
+
         if (isSelected) {
-            // Remove selection
             element.classList.remove('selected');
             element.style.backgroundColor = '';
             element.style.borderColor = '';
             this.selectedTeams = this.selectedTeams.filter(t => t.id !== team.id);
             element.querySelector('.selection-status').textContent = 'Klicken zum Auswählen';
         } else {
-            // Add selection
             element.classList.add('selected');
             element.style.backgroundColor = 'var(--accent-primary)';
             element.style.borderColor = 'var(--accent-secondary)';
             this.selectedTeams.push(team);
             element.querySelector('.selection-status').textContent = '✓ Ausgewählt';
         }
-        
-        console.log('Selected teams:', this.selectedTeams.map(t => t.name));
-        console.log('Selected teams count:', this.selectedTeams.length);
-        
-        // Update tournament structure
-        this.updateTournamentStructure();
-    }
-
-    // Create tournament
-    createTournament() {
-        if (this.selectedTeams.length < 4) {
-            alert('Bitte wähle mindestens 4 Teams aus.');
-            return;
+        const countSpan = document.getElementById('manual-teams-count');
+        if (countSpan) {
+            countSpan.textContent = this.selectedTeams.filter(t => t.isManual).length;
         }
-
-        document.getElementById('tournament-builder').classList.remove('hidden');
-        document.getElementById('simulate-tournament').disabled = false;
         this.updateTournamentStructure();
     }
 
-    // Update tournament structure
-    updateTournamentStructure() {
-        if (!this.selectedTeams.length) return;
+    createTournament() {
+        document.getElementById('tournament-builder').classList.remove('hidden');
+        this.updateTournamentStructure();
+    }
 
+    updateTournamentStructure() {
+        const tournamentType = document.querySelector('input[name="tournament-type"]:checked').value;
         const groupCount = parseInt(document.getElementById('group-count').value);
         const teamsPerGroup = parseInt(document.getElementById('teams-per-group').value);
-        const totalTeamsNeeded = groupCount * teamsPerGroup;
+        const simulateButton = document.getElementById('simulate-tournament');
 
-        if (this.selectedTeams.length < totalTeamsNeeded) {
-            document.getElementById('simulate-tournament').disabled = true;
-            return;
+        if (tournamentType === 'groups') {
+            document.querySelector('.group-settings').classList.remove('hidden');
+            const totalTeamsNeeded = groupCount * teamsPerGroup;
+            if (this.selectedTeams.length < totalTeamsNeeded) {
+                simulateButton.disabled = true;
+                simulateButton.textContent = `Wähle ${totalTeamsNeeded - this.selectedTeams.length} weitere Teams aus`;
+                return;
+            }
+        } else {
+            document.querySelector('.group-settings').classList.add('hidden');
+            if (this.selectedTeams.length < 2) {
+                simulateButton.disabled = true;
+                simulateButton.textContent = `Wähle mindestens 2 Teams aus`;
+                return;
+            }
         }
 
-        document.getElementById('simulate-tournament').disabled = false;
+        simulateButton.disabled = false;
+        simulateButton.innerHTML = `<i class="fas fa-play"></i> Turnier simulieren`;
     }
 
-    // Simulate tournament
     simulateTournament() {
         const tournamentType = document.querySelector('input[name="tournament-type"]:checked').value;
         const groupCount = parseInt(document.getElementById('group-count').value);
         const teamsPerGroup = parseInt(document.getElementById('teams-per-group').value);
 
-        if (this.selectedTeams.length < groupCount * teamsPerGroup) {
-            alert('Nicht genügend Teams ausgewählt.');
+        const simulateButton = document.getElementById('simulate-tournament');
+        if (simulateButton.disabled) {
+            alert('Bitte wähle die benötigte Anzahl an Teams aus.');
             return;
         }
 
-        // Create tournament structure
         this.tournament = this.createTournamentStructure(tournamentType, groupCount, teamsPerGroup);
-        
-        // Simulate all matches
+
         this.simulateTournamentMatches();
-        
-        // Display results
+
         this.displayTournamentResults();
     }
 
-    // Create tournament structure
     createTournamentStructure(type, groupCount, teamsPerGroup) {
         const tournament = {
             type: type,
@@ -690,20 +578,18 @@ class ELOSimulator {
             winner: null
         };
 
+        let shuffledTeams = [...this.selectedTeams].sort(() => Math.random() - 0.5);
+
         if (type === 'groups') {
-            // Create groups
-            const shuffledTeams = [...this.selectedTeams].sort(() => Math.random() - 0.5);
-            
             for (let i = 0; i < groupCount; i++) {
-                const groupTeams = shuffledTeams.slice(i * teamsPerGroup, (i + 1) * teamsPerGroup);
+                const groupTeams = shuffledTeams.splice(0, teamsPerGroup);
                 tournament.groups.push({
                     id: i + 1,
-                    teams: groupTeams.map(team => ({ ...team, points: 0, goalsFor: 0, goalsAgainst: 0 })),
+                    teams: groupTeams.map(team => ({ ...team, points: 0, goalsFor: 0, goalsAgainst: 0, wins: 0, draws: 0, losses: 0 })),
                     matches: []
                 });
             }
 
-            // Generate group matches
             tournament.groups.forEach(group => {
                 for (let i = 0; i < group.teams.length; i++) {
                     for (let j = i + 1; j < group.teams.length; j++) {
@@ -718,55 +604,60 @@ class ELOSimulator {
                 }
             });
         } else {
-            // Direct knockout
-            const shuffledTeams = [...this.selectedTeams].sort(() => Math.random() - 0.5);
             tournament.knockout = this.createKnockoutBracket(shuffledTeams);
         }
 
         return tournament;
     }
 
-    // Create knockout bracket
     createKnockoutBracket(teams) {
-        const bracket = [];
-        const rounds = Math.ceil(Math.log2(teams.length));
-        const totalSlots = Math.pow(2, rounds);
-        
-        // Fill with teams and byes
-        const bracketTeams = [...teams];
-        while (bracketTeams.length < totalSlots) {
-            bracketTeams.push({ name: 'BYE', elo: 0, isBye: true });
-        }
+        let bracket = [];
+        let currentRoundTeams = [...teams];
+        let roundNum = 1;
 
-        // Create rounds
-        for (let round = 0; round < rounds; round++) {
-            const roundMatches = [];
-            const matchesInRound = Math.pow(2, rounds - round - 1);
-            
-            for (let match = 0; match < matchesInRound; match++) {
-                const team1Index = match * 2;
-                const team2Index = match * 2 + 1;
-                
+        while (currentRoundTeams.length > 1) {
+            let nextRoundTeams = [];
+            let roundMatches = [];
+            let numByes = 0;
+            const requiredTeams = Math.pow(2, Math.ceil(Math.log2(currentRoundTeams.length)));
+            if (currentRoundTeams.length < requiredTeams) {
+                numByes = requiredTeams - currentRoundTeams.length;
+            }
+
+            // Add byes to fill up the bracket to a power of 2
+            for (let i = 0; i < numByes; i++) {
+                currentRoundTeams.splice(Math.floor(Math.random() * (currentRoundTeams.length + 1)), 0, { name: 'BYE', elo: 0, isBye: true, id: 'bye_' + Date.now() + i });
+            }
+
+            for (let i = 0; i < currentRoundTeams.length; i += 2) {
+                const team1 = currentRoundTeams[i];
+                const team2 = currentRoundTeams[i + 1];
+
+                if (!team1 || !team2) {
+                    continue;
+                }
+
                 roundMatches.push({
-                    team1: bracketTeams[team1Index] || null,
-                    team2: bracketTeams[team2Index] || null,
+                    team1: team1,
+                    team2: team2,
                     score1: 0,
                     score2: 0,
                     played: false,
                     winner: null
                 });
+                nextRoundTeams.push(null);
             }
-            
             bracket.push({
-                round: round + 1,
+                round: roundNum,
                 matches: roundMatches
             });
+            currentRoundTeams = nextRoundTeams;
+            roundNum++;
         }
-
         return bracket;
     }
 
-    // Simulate tournament matches
+
     simulateTournamentMatches() {
         if (this.tournament.type === 'groups') {
             this.simulateGroupStage();
@@ -776,128 +667,145 @@ class ELOSimulator {
         }
     }
 
-    // Simulate group stage
     simulateGroupStage() {
         this.tournament.groups.forEach(group => {
             group.matches.forEach(match => {
                 if (match.team1.isBye || match.team2.isBye) return;
-                
+
                 const result = this.simulateMatchResult(match.team1, match.team2);
                 match.score1 = result.score1;
                 match.score2 = result.score2;
                 match.played = true;
-                
-                // Update group standings
+
                 this.updateGroupStandings(group, match);
             });
         });
 
-        // Sort teams in each group
         this.tournament.groups.forEach(group => {
             group.teams.sort((a, b) => {
                 if (b.points !== a.points) return b.points - a.points;
-                if ((b.goalsFor - b.goalsAgainst) !== (a.goalsFor - a.goalsAgainst)) {
-                    return (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst);
-                }
+                const goalDiffA = a.goalsFor - a.goalsAgainst;
+                const goalDiffB = b.goalsFor - b.goalsAgainst;
+                if (goalDiffB !== goalDiffA) return goalDiffB - goalDiffA;
                 return b.goalsFor - a.goalsFor;
             });
         });
     }
 
-    // Simulate match result
     simulateMatchResult(team1, team2) {
         const team1WinProb = this.calculateELOProbability(team1.elo, team2.elo);
         const random = Math.random();
-        
+
         let score1, score2;
-        
-        if (random < team1WinProb) {
-            // Team 1 wins
+
+        if (random < team1WinProb * 0.7) {
             score1 = Math.floor(Math.random() * 3) + 1;
-            score2 = Math.floor(score1 * Math.random());
-        } else if (random < team1WinProb + 0.2) {
-            // Draw
+            score2 = Math.floor(Math.random() * Math.min(score1, 2));
+        } else if (random < team1WinProb * 0.7 + 0.2) {
             score1 = Math.floor(Math.random() * 3);
             score2 = score1;
         } else {
-            // Team 2 wins
             score2 = Math.floor(Math.random() * 3) + 1;
-            score1 = Math.floor(score2 * Math.random());
+            score1 = Math.floor(Math.random() * Math.min(score2, 2));
         }
-        
+
         return { score1, score2 };
     }
 
-    // Update group standings
     updateGroupStandings(group, match) {
-        const team1 = group.teams.find(t => t.name === match.team1.name);
-        const team2 = group.teams.find(t => t.name === match.team2.name);
-        
+        const team1 = group.teams.find(t => t.id === match.team1.id);
+        const team2 = group.teams.find(t => t.id === match.team2.id);
+
         team1.goalsFor += match.score1;
         team1.goalsAgainst += match.score2;
         team2.goalsFor += match.score2;
         team2.goalsAgainst += match.score1;
-        
+
         if (match.score1 > match.score2) {
             team1.points += 3;
+            team1.wins++;
+            team2.losses++;
         } else if (match.score1 < match.score2) {
             team2.points += 3;
+            team2.wins++;
+            team1.losses++;
         } else {
             team1.points += 1;
             team2.points += 1;
+            team1.draws++;
+            team2.draws++;
         }
     }
 
-    // Simulate knockout stage
     simulateKnockoutStage() {
-        // Get top 2 teams from each group
         const knockoutTeams = [];
         this.tournament.groups.forEach(group => {
             knockoutTeams.push(group.teams[0], group.teams[1]);
         });
-        
+
         this.tournament.knockout = this.createKnockoutBracket(knockoutTeams);
         this.simulateDirectKnockout();
     }
 
-    // Simulate direct knockout
     simulateDirectKnockout() {
-        this.tournament.knockout.forEach(round => {
-            round.matches.forEach(match => {
-                if (match.team1 && match.team2 && !match.team1.isBye && !match.team2.isBye) {
+        for (let roundIndex = 0; roundIndex < this.tournament.knockout.length; roundIndex++) {
+            const currentRound = this.tournament.knockout[roundIndex];
+            const nextRoundMatches = [];
+
+            for (let matchIndex = 0; matchIndex < currentRound.matches.length; matchIndex++) {
+                const match = currentRound.matches[matchIndex];
+                let winnerTeam = null;
+
+                if (match.team1.isBye && match.team2.isBye) {
+                    winnerTeam = null;
+                } else if (match.team1.isBye) {
+                    winnerTeam = match.team2;
+                } else if (match.team2.isBye) {
+                    winnerTeam = match.team1;
+                } else {
                     const result = this.simulateMatchResult(match.team1, match.team2);
                     match.score1 = result.score1;
                     match.score2 = result.score2;
                     match.played = true;
-                    match.winner = result.score1 > result.score2 ? match.team1 : match.team2;
-                } else if (match.team1 && !match.team1.isBye) {
-                    match.winner = match.team1;
-                } else if (match.team2 && !match.team2.isBye) {
-                    match.winner = match.team2;
-                }
-            });
-        });
 
-        // Determine winner
+                    if (match.score1 > match.score2) {
+                        winnerTeam = match.team1;
+                    } else if (match.score1 < match.score2) {
+                        winnerTeam = match.team2;
+                    } else {
+                        winnerTeam = Math.random() < 0.5 ? match.team1 : match.team2;
+                        match.score1++; // Resolve tie for knockout
+                    }
+                }
+                match.winner = winnerTeam;
+                if (winnerTeam) {
+                    nextRoundMatches.push(winnerTeam);
+                }
+            }
+
+            if (roundIndex < this.tournament.knockout.length - 1) {
+                const nextRoundBracket = this.createKnockoutBracket(nextRoundMatches);
+                this.tournament.knockout[roundIndex + 1].matches = nextRoundBracket[0].matches;
+            }
+        }
         const finalRound = this.tournament.knockout[this.tournament.knockout.length - 1];
-        if (finalRound.matches[0].winner) {
+        if (finalRound && finalRound.matches[0] && finalRound.matches[0].winner) {
             this.tournament.winner = finalRound.matches[0].winner;
         }
     }
 
-    // Display tournament results
     displayTournamentResults() {
         const bracketDiv = document.getElementById('tournament-bracket');
         bracketDiv.classList.remove('hidden');
-        
-        let html = '<h3>Turnierergebnisse</h3>';
-        
+
+        let html = '<h3 class="section-title">Turnierergebnisse</h3>';
+
         if (this.tournament.type === 'groups') {
             html += this.generateGroupResultsHTML();
         }
-        
+
         html += this.generateKnockoutResultsHTML();
-        
+
         if (this.tournament.winner) {
             html += `
                 <div class="tournament-winner">
@@ -906,14 +814,14 @@ class ELOSimulator {
                 </div>
             `;
         }
-        
+
         bracketDiv.innerHTML = html;
+        bracketDiv.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // Generate group results HTML
     generateGroupResultsHTML() {
         let html = '<div class="group-results">';
-        
+
         this.tournament.groups.forEach(group => {
             html += `
                 <div class="group">
@@ -922,286 +830,70 @@ class ELOSimulator {
                         <thead>
                             <tr>
                                 <th>Team</th>
-                                <th>Pkt</th>
+                                <th>Sp.</th>
+                                <th>S</th>
+                                <th>U</th>
+                                <th>N</th>
                                 <th>Tore</th>
                                 <th>Diff</th>
+                                <th>Pkt</th>
                             </tr>
                         </thead>
                         <tbody>
             `;
-            
+
             group.teams.forEach(team => {
                 const goalDiff = team.goalsFor - team.goalsAgainst;
+                const gamesPlayed = team.wins + team.draws + team.losses;
                 html += `
                     <tr>
                         <td>${team.name}</td>
-                        <td>${team.points}</td>
+                        <td>${gamesPlayed}</td>
+                        <td>${team.wins}</td>
+                        <td>${team.draws}</td>
+                        <td>${team.losses}</td>
                         <td>${team.goalsFor}:${team.goalsAgainst}</td>
                         <td>${goalDiff > 0 ? '+' : ''}${goalDiff}</td>
+                        <td>${team.points}</td>
                     </tr>
                 `;
             });
-            
+
             html += '</tbody></table></div>';
         });
-        
+
         html += '</div>';
         return html;
     }
 
-    // Generate knockout results HTML
     generateKnockoutResultsHTML() {
         let html = '<div class="knockout-results">';
-        
+
         this.tournament.knockout.forEach(round => {
             html += `<h4>Runde ${round.round}</h4>`;
-            
-            round.matches.forEach((match, index) => {
-                if (match.team1 && match.team2) {
-                    const team1Name = match.team1.isBye ? 'BYE' : match.team1.name;
-                    const team2Name = match.team2.isBye ? 'BYE' : match.team2.name;
-                    
-                    html += `
-                        <div class="match-result">
-                            <span>${team1Name}</span>
-                            <span class="score">${match.played ? match.score1 : '-'}</span>
-                            <span>vs</span>
-                            <span class="score">${match.played ? match.score2 : '-'}</span>
-                            <span>${team2Name}</span>
-                            ${match.winner ? `<span class="winner">🏆 ${match.winner.name}</span>` : ''}
-                        </div>
-                    `;
-                }
+
+            round.matches.forEach((match) => {
+                const team1Name = match.team1 ? (match.team1.isBye ? 'BYE' : match.team1.name) : 'TBD';
+                const team2Name = match.team2 ? (match.team2.isBye ? 'BYE' : match.team2.name) : 'TBD';
+
+                html += `
+                    <div class="match-result">
+                        <span>${team1Name}</span>
+                        <span class="score">${match.played ? match.score1 : '-'}</span>
+                        <span>vs</span>
+                        <span class="score">${match.played ? match.score2 : '-'}</span>
+                        <span>${team2Name}</span>
+                        ${match.winner && !match.winner.isBye ? `<span class="winner">🏆 ${match.winner.name}</span>` : ''}
+                    </div>
+                `;
             });
         });
-        
+
         html += '</div>';
         return html;
     }
 }
 
-// Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new ELOSimulator();
 });
-// Add some additional CSS for tournament results
-const additionalStyles = `
-    .group-results {
-        display: grid;
-        gap: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .group {
-        background: var(--bg-primary);
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid var(--border-color);
-    }
-    
-    .group h4 {
-        color: var(--accent-primary);
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-    
-    .standings-table {
-        width: 100%;
-        border-collapse: collapse;
-        color: var(--text-secondary);
-    }
-    
-    .standings-table th,
-    .standings-table td {
-        padding: 0.5rem;
-        text-align: center;
-        border-bottom: 1px solid var(--border-color);
-    }
-    
-    .standings-table th {
-        background: var(--bg-tertiary);
-        color: var(--accent-primary);
-        font-weight: 600;
-    }
-    
-    .knockout-results {
-        background: var(--bg-primary);
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid var(--border-color);
-    }
-    
-    .knockout-results h4 {
-        color: var(--accent-primary);
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-    
-    .match-result {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem;
-        background: var(--bg-tertiary);
-        border-radius: 6px;
-        margin-bottom: 0.5rem;
-        border: 1px solid var(--border-color);
-    }
-    
-    .match-result .score {
-        font-weight: 700;
-        color: var(--accent-primary);
-        min-width: 30px;
-        text-align: center;
-    }
-    
-    .match-result .winner {
-        color: var(--accent-primary);
-        font-weight: 600;
-        margin-left: 1rem;
-    }
-    
-    .tournament-winner {
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-        color: var(--bg-primary);
-        padding: 2rem;
-        border-radius: 12px;
-        text-align: center;
-        margin-top: 2rem;
-        box-shadow: 0 0 30px var(--glow-color);
-    }
-    
-    .tournament-winner h4 {
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .tournament-winner p {
-        font-size: 1.2rem;
-        font-weight: 600;
-    }
-
-    .elo-editable {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .elo-editable label {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-
-    .elo-input {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        width: 80px;
-        font-size: 0.9rem;
-    }
-
-    .elo-input:focus {
-        outline: none;
-        border-color: var(--accent-primary);
-        box-shadow: 0 0 10px var(--shadow-color);
-    }
-
-    .stats-content {
-        display: grid;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        background: var(--bg-primary);
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-    }
-
-    .stat-value {
-        font-weight: 600;
-        color: var(--accent-primary);
-        font-size: 1.1rem;
-    }
-
-    .last-result {
-        background: var(--bg-primary);
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid var(--border-color);
-        margin-top: 1rem;
-    }
-
-    .last-result h4 {
-        color: var(--accent-primary);
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-
-    .manual-team-input {
-        grid-column: 1 / -1;
-        background: var(--bg-primary);
-        border: 3px solid var(--accent-primary);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 0 20px var(--shadow-color);
-    }
-
-    .manual-team-input h3 {
-        color: var(--accent-primary);
-        margin-bottom: 1rem;
-        text-align: center;
-        font-size: 1.2rem;
-    }
-
-    .manual-team-input input[type="text"],
-    .manual-team-input input[type="number"] {
-        background: var(--bg-tertiary);
-        border: 2px solid var(--border-color);
-        color: var(--text-primary);
-        padding: 0.75rem;
-        border-radius: 6px;
-        min-width: 180px;
-        width: 120px;
-        font-size: 1rem;
-    }
-
-    .manual-team-input button {
-        background: var(--accent-primary);
-        color: var(--bg-primary);
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .manual-team-input button:hover {
-        transform: scale(1.05);
-    }
-
-    .manual-team-input button:active {
-        transform: scale(0.95);
-    }
-
-    .manual-team-input .manual-teams-count {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-`;
-
-// Inject additional styles
-const styleSheet = document.createElement('style');
-styleSheet.textContent = additionalStyles;
-document.head.appendChild(styleSheet);
-

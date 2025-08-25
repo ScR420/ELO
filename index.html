@@ -10,7 +10,6 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
                 <h1 class="logo">
@@ -38,9 +37,7 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Simulation Tab -->
             <section id="simulation" class="tab-content active">
                 <div class="container">
                     <h2 class="section-title">Einzelspiel Simulation</h2>
@@ -56,13 +53,13 @@
                                     <button class="preset-btn" data-team="spain">Spanien</button>
                                 </div>
                             </div>
-                            
+
                             <div class="vs-section">
                                 <div class="vs-circle">
                                     <span>VS</span>
                                 </div>
                             </div>
-                            
+
                             <div class="team-card">
                                 <h3>Team 2</h3>
                                 <div class="team-input">
@@ -74,7 +71,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="simulation-controls">
                             <div class="simulation-count">
                                 <label for="simulation-count">Anzahl Simulationen:</label>
@@ -85,7 +82,7 @@
                                 Spiel simulieren
                             </button>
                         </div>
-                        
+
                         <div id="match-result" class="match-result hidden">
                             <div class="result-header">
                                 <h3>Spielergebnis</h3>
@@ -125,7 +122,6 @@
                 </div>
             </section>
 
-            <!-- Tournament Tab -->
             <section id="tournament" class="tab-content">
                 <div class="container">
                     <h2 class="section-title">Turnier Simulation</h2>
@@ -140,7 +136,7 @@
                                 Turnier simulieren
                             </button>
                         </div>
-                        
+
                         <div id="tournament-builder" class="tournament-builder hidden">
                             <div class="tournament-structure">
                                 <h3>Turnierstruktur</h3>
@@ -170,35 +166,30 @@
                                     </label>
                                 </div>
                             </div>
-                            
+
                             <div class="team-selection-tournament">
                                 <h3>Teams auswählen</h3>
                                 <div class="team-grid" id="team-grid">
-                                    <!-- Teams will be populated here -->
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div id="tournament-bracket" class="tournament-bracket hidden">
-                            <!-- Tournament bracket will be generated here -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Teams Tab -->
             <section id="teams" class="tab-content">
                 <div class="container">
                     <h2 class="section-title">Team Übersicht</h2>
                     <div class="teams-overview">
                         <div class="teams-grid" id="teams-grid">
-                            <!-- Teams will be populated here -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- About ELO Tab -->
             <section id="about" class="tab-content">
                 <div class="container">
                     <h2 class="section-title">Über das ELO-Ratingsystem</h2>
@@ -207,12 +198,12 @@
                             <h3>Was ist ELO?</h3>
                             <p>Das ELO-Ratingsystem ist eine mathematische Methode zur Berechnung der relativen Spielstärke von Spielern oder Teams in kompetitiven Spielen. Es wurde ursprünglich für Schach entwickelt und wird heute in vielen Sportarten verwendet.</p>
                         </div>
-                        
+
                         <div class="explanation-card">
                             <h3>Wie funktioniert es?</h3>
                             <p>Jedes Team hat einen ELO-Wert. Nach einem Spiel wird dieser Wert basierend auf dem Ergebnis und der ELO-Differenz zum Gegner angepasst. Ein Sieg gegen einen stärkeren Gegner bringt mehr Punkte als ein Sieg gegen einen schwächeren.</p>
                         </div>
-                        
+
                         <div class="explanation-card">
                             <h3>Die Formel</h3>
                             <div class="formula">
